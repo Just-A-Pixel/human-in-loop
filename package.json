@@ -1,0 +1,21 @@
+{
+  "name": "lyzer",
+  "version": "1.0.0",
+  "description": "Hackathon project",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Raj Anand",
+  "license": "ISC",
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
