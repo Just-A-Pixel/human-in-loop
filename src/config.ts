@@ -25,6 +25,10 @@ export const config = {
   log: {
     level: env.get("LOG_LEVEL").default("info").asEnum(["debug", "info", "warn", "error"]),
   },
+
+  forwader: {
+    port: env.get("FORWARDER_PORT").default("4000").asPortNumber()
+  }
 };
 
 /**

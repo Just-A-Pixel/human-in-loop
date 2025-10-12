@@ -5,17 +5,22 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev:forwarder": "node --loader ts-node/esm src/forwarder.ts",
     "test": "vitest"
   },
   "author": "Raj Anand",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^2.2.0",
     "dotenv": "^17.2.3",
     "env-var": "^7.5.0",
+    "express": "^5.1.0",
     "kafkajs": "^2.2.4",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.7.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
