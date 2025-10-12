@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import { createProducer, ensureTopics, TOPICS } from "./common.js";
 import { uuid, nowIso } from "./util.js";
 import { config } from "./config.js";
+import { buildEnvelope, validateMinimalInput, Envelope } from "./envelope";
 
 /**
  * FORWARDER SERVICE 
@@ -43,24 +44,31 @@ async function run() {
         topic: TOPICS.WORKFLOW_EVENTS,
         messages: [
           {
-            key: envelope.streamId ?? uuid(),
+            key: envelope.streamId,
             value: JSON.stringify(envelope),
-            headers: { eventType: envelope.eventType ?? "UnknownEvent" },
+            headers: { eventType: envelope.eventType },
           },
         ],
         acks: -1,
       });
 
+      console.log("[forwarder] published", {
+        eventType: envelope.eventType,
+        streamId: envelope.streamId,
+        eventId: envelope.eventId,
+      });
+
       return res.status(202).json({
         status: "accepted",
-        eventId: envelope.eventId ?? uuid(),
-        streamId: envelope.streamId ?? "unknown",
+        eventId: envelope.eventId,
+        streamId: envelope.streamId,
+        createdAt: envelope.createdAt,
       });
-    } catch (err: any) {
-      console.error("[forwarder] failed to publish to Kafka:", err?.message ?? err);
+    } catch (err: unknown) {
+      console.error("[forwarder] publish failed:", (err as Error).message || err);
       return res.status(503).json({
         status: "error",
-        message: "failed to publish to backend (temporarily unavailable)",
+        message: "Failed to publish to backend (temporarily unavailable)",
       });
     }
   });
