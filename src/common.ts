@@ -74,10 +74,12 @@ export async function createConsumer(
 }
 
 /**
- * Ensure topics exist in the cluster using Admin API.
- * Uses the topic names from TOPICS above.
+ * Ensure topics exist in Kafka.
+ * Returns:
+ *   true  => all topics verified or successfully created
+ *   false => one or more topics could not be created (errors logged)
  */
-export async function ensureTopics() {
+export async function ensureTopics(): Promise<boolean> {
   const kafka = createKafkaClient(`${KAFKA_CLIENT_ID}-admin`);
   const admin = kafka.admin();
   await admin.connect();
@@ -88,6 +90,22 @@ export async function ensureTopics() {
     { topic: TOPICS.HUMAN_RESPONSES, numPartitions: 3, replicationFactor: 1 },
   ];
 
-  await admin.createTopics({ topics, waitForLeaders: true });
-  await admin.disconnect();
+  try {
+    const created = await admin.createTopics({ topics, waitForLeaders: true });
+
+    if (created) {
+      console.log("[kafka] Topics created:", topics.map((t) => t.topic).join(", "));
+    } else {
+      console.log("[kafka] Topics already exist or no new topics created.");
+    }
+
+    await admin.disconnect();
+    return true;
+  } catch (err: any) {
+    console.error("[kafka] Failed to ensure topics:", err.message || err);
+    try {
+      await admin.disconnect();
+    } catch {}
+    return false;
+  }
 }
