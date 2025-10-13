@@ -42,7 +42,7 @@ async function insertEvent(client: any, contextId: string, type: string, payload
 
 async function upsertApprovalRequest(client: any, contextId: string, payload: any) {
   const snapshot = payload.snapshot ?? payload;
-  const approver = payload.requester ?? snapshot?.requester ?? null;
+  const approver = payload.approver?? null;
   const title = payload.title ?? snapshot?.title ?? null;
   const deadline = payload.deadline ?? snapshot?.deadline ?? null;
   const turns = snapshot?.turns ?? [];
@@ -74,7 +74,7 @@ async function publishApprovalNotification(contextId: string, payload: any) {
   const notification = {
     eventType: "approval_created",
     context_id: contextId,
-    approver: payload.requester ?? payload?.snapshot?.requester ?? null,
+    approver: payload.approver?? "test",
     title: payload.title ?? payload?.snapshot?.title ?? null,
     createdAt: new Date().toISOString(),
     snapshotSummary: {

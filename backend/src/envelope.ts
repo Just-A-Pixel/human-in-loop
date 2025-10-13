@@ -22,7 +22,7 @@ export const ApprovalEnvelopeSchema = z.object({
   session_id: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional(),
-  requester: z.string().optional(),
+  approver: z.string(),
   ui_schema: z.record(z.string(), z.any()).optional(),
   snapshot: SnapshotSchema,
   actions: z.array(ActionSchema).nonempty("At least one action required"),

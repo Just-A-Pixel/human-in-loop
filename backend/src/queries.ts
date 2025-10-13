@@ -37,4 +37,28 @@ export const QUERIES = {
    SET status = $1, updated_at = NOW()
    WHERE context_id = $2;
  `,
+
+ /* NEW: select approvals by approver (with optional status); returns total count and rows */
+ SELECT_APPROVALS_BY_APPROVER: `
+ SELECT
+   context_id,
+   approver_name,
+   title,
+   deadline,
+   turns,
+   snapshot,
+   status,
+   created_at,
+   updated_at
+ FROM approvals
+ WHERE approver_name = $1
+ ORDER BY created_at DESC
+`,
+
+// To enable pagination
+//  
+//  LIMIT $2
+//  OFFSET $3;
+
+
 };

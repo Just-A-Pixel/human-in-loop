@@ -16,8 +16,7 @@ CREATE TABLE users (
   user_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   username text NOT NULL UNIQUE,
   display_name text,
-  email text,
-  channels jsonb DEFAULT '{}'::jsonb,
+  channels text[] DEFAULT ARRAY['email'],
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
