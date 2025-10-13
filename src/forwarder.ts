@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { createProducer, ensureTopics, TOPICS } from "./common.js";
+import { getProducer, ensureTopics, TOPICS } from "./kafka.js";
 import { uuid, nowIso } from "./util.js";
 import { config } from "./config.js";
 import approvalsRouter from "./routes/approvals.js";
@@ -24,7 +24,7 @@ async function run() {
     process.exit(1);
   }
 
-  const producer = await createProducer(`${config.kafka.clientId}-forwarder`);
+  const producer = await getProducer(`${config.kafka.clientId}-forwarder`);
 
   const app = express();
   app.use(bodyParser.json({ limit: "256kb" }));
