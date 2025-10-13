@@ -23,7 +23,7 @@ function buildMessage(envelope: ApprovalEnvelope) {
   return {
     key: envelope.session_id,
     value: JSON.stringify(envelope),
-    headers: { eventType: envelope.eventType ?? "approval_requested" },
+    headers: { eventType: "approval_requested" },
   };
 }
 
@@ -50,9 +50,9 @@ async function sendToKafka(producer: Producer, topic: string, message: any) {
 function acceptedResponse(envelope: ApprovalEnvelope) {
   return {
     status: "accepted",
-    eventId: envelope.eventId ?? null,
-    streamId: envelope.streamId ?? envelope.session_id,
-    createdAt: envelope.createdAt ?? new Date().toISOString(),
+    contextId: envelope.snapshot.context_id,
+    streamId: envelope.session_id,
+    createdAt: new Date().toISOString(),
   };
 }
 
