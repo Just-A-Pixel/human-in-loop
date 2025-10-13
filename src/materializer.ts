@@ -1,8 +1,7 @@
 // src/materializer.ts
 import "source-map-support/register.js";
-import { Kafka, logLevel } from "kafkajs";
 import { createConsumer, TOPICS, getProducer } from "./kafka.js";
-import { Pool } from "pg";
+import { pool, ensureDbConnection, runTransactionWithRetries } from "./postgres.js";
 import { config } from "./config.js";
 import { QUERIES } from "./queries.js";
 
@@ -10,17 +9,6 @@ const LOG_PREFIX = `[${config.materializer.name}]`;
 
 // No other event is being handled by this kafka topic.
 const EVENT_TYPE = "approval_requested";
-
-/** --- Postgres pool (from config) --- */
-const pool = new Pool({
-  host: config.postgres.host,
-  port: config.postgres.port,
-  user: config.postgres.user,
-  password: config.postgres.password,
-  database: config.postgres.database,
-  max: config.postgres.poolMax,
-  idleTimeoutMillis: 30_000,
-});
 
 /** --- Kafka consumer --- */
 const consumer = await createConsumer(config.kafka.groupId, [TOPICS.WORKFLOW_EVENTS], false);
@@ -46,10 +34,6 @@ function deriveContextId(payload: any) {
   );
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /* ---------- DB logic (uses QUERIES) ---------- */
 
 async function insertEvent(client: any, contextId: string, type: string, payload: any, actor?: string) {
@@ -73,57 +57,6 @@ async function upsertApprovalRequest(client: any, contextId: string, payload: an
   ]);
 }
 
-/* ---------- Transaction with retry ---------- */
-
-/**
- * Runs the provided callback inside a DB transaction, retrying on transient failures.
- *
- * @param callback async function that accepts a connected client and performs transactional work
- * @param opts.maxRetries maximum attempts (default 3)
- * @param opts.baseDelayMs base backoff in ms (default 200ms)
- */
-async function runTransactionWithRetries<T>(
-  callback: (client: any) => Promise<T>,
-  opts: { maxRetries?: number; baseDelayMs?: number } = {}
-): Promise<T> {
-  const maxRetries = opts.maxRetries ?? 3;
-  const baseDelayMs = opts.baseDelayMs ?? 200;
-
-  let attempt = 0;
-  while (true) {
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      const result = await callback(client);
-      await client.query("COMMIT");
-      client.release();
-      return result;
-    } catch (err) {
-      // Attempt rollback, ignore rollback errors
-      try {
-        await client.query("ROLLBACK");
-      } catch (_) {}
-      client.release();
-
-      attempt += 1;
-      const isLastAttempt = attempt > maxRetries;
-      if (isLastAttempt) {
-        throw err;
-      }
-
-      // Exponential backoff with jitter
-      const backoff = baseDelayMs * Math.pow(2, attempt - 1);
-      const jitter = Math.floor(Math.random() * baseDelayMs);
-      const delay = Math.min(backoff + jitter, 5000); // cap delay to 5s
-
-      console.warn(
-        `${LOG_PREFIX} transaction attempt ${attempt}/${maxRetries} failed — retrying in ${delay}ms`,
-        (err as Error).message ?? err
-      );
-      await sleep(delay);
-    }
-  }
-}
 
 /* ---------- Notification publisher ---------- */
 
@@ -186,12 +119,10 @@ async function handleMessage(messageValue: Buffer | string | null, headers: Reco
 
   let committed = false;
   try {
-    // run transactional work with retries
     await runTransactionWithRetries(
       async (client) => {
         await insertEvent(client, contextId, EVENT_TYPE, payload, payload?.requester ?? payload?.actor ?? "agent");
         await upsertApprovalRequest(client, contextId, payload);
-        // Returning a small marker isn't necessary, success means commit happened.
         return true;
       },
       { maxRetries: 3, baseDelayMs: 200 }
@@ -217,13 +148,8 @@ async function handleMessage(messageValue: Buffer | string | null, headers: Reco
 /* ---------- Runner ---------- */
 
 async function run() {
-  try {
-    await pool.query("SELECT 1");
-    console.log(`${LOG_PREFIX} connected to Postgres`);
-  } catch (err) {
-    console.error(`${LOG_PREFIX} cannot connect to Postgres`, err);
-    process.exit(1);
-  }
+  const ok = await ensureDbConnection();
+  if (!ok) process.exit(1);
 
   await consumer.run({
     eachMessage: async ({ message }) => {
