@@ -3,7 +3,8 @@ import bodyParser from "body-parser";
 import { createProducer, ensureTopics, TOPICS } from "./common.js";
 import { uuid, nowIso } from "./util.js";
 import { config } from "./config.js";
-import { ApprovalEnvelopeSchema } from "./envelope.js";
+import approvalsRouter from "./routes/approvals.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 /**
  * FORWARDER SERVICE 
@@ -28,52 +29,13 @@ async function run() {
   const app = express();
   app.use(bodyParser.json({ limit: "256kb" }));
 
-  /**
-   * POST /events
-   * Publishes directly to Kafka (workflow-events topic)
-   */
-  app.post("/api/approval", async (req, res) => {
-    const envelope = ApprovalEnvelopeSchema.parse(req.body);
-    const { session_id, title, description, snapshot, actions, rollback_actions } = envelope;
-    
-    // Publish to Kafka
-    try {
-      await producer.send({
-        topic: TOPICS.WORKFLOW_EVENTS,
-        messages: [
-          {
-            key: envelope.streamId,
-            value: JSON.stringify(envelope),
-            headers: { eventType: envelope.eventType },
-          },
-        ],
-        acks: -1,
-      });
+  app.locals.producer = producer;
 
-      console.log("[forwarder] published", {
-        eventType: envelope.eventType,
-        streamId: envelope.streamId,
-        eventId: envelope.eventId,
-      });
-
-      return res.status(202).json({
-        status: "accepted",
-        eventId: envelope.eventId,
-        streamId: envelope.streamId,
-        createdAt: envelope.createdAt,
-      });
-    } catch (err: unknown) {
-      console.error("[forwarder] publish failed:", (err as Error).message || err);
-      return res.status(503).json({
-        status: "error",
-        message: "Failed to publish to backend (temporarily unavailable)",
-      });
-    }
-  });
+  app.use("/api", approvalsRouter);
+  app.use(errorHandler);
 
   app.listen(PORT, () => {
     console.log(`[forwarder] listening on http://localhost:${PORT}`);
-    console.log(`[forwarder] endpoint: POST /events`);
   });
 }
 

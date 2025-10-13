@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev:forwarder": "node --loader ts-node/esm src/forwarder.ts",
+    "dev:forwarder": "tsx watch src/forwarder.ts",
     "test": "vitest"
   },
   "author": "Raj Anand",
@@ -24,7 +24,9 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.2",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
