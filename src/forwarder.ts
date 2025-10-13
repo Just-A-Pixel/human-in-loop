@@ -3,7 +3,7 @@ import bodyParser from "body-parser";
 import { createProducer, ensureTopics, TOPICS } from "./common.js";
 import { uuid, nowIso } from "./util.js";
 import { config } from "./config.js";
-import { buildEnvelope, validateMinimalInput, Envelope } from "./envelope";
+import { ApprovalEnvelopeSchema } from "./envelope.js";
 
 /**
  * FORWARDER SERVICE 
@@ -32,13 +32,11 @@ async function run() {
    * POST /events
    * Publishes directly to Kafka (workflow-events topic)
    */
-  app.post("/events", async (req, res) => {
-    const envelope = {
-      ...req.body,
-      createdAt: nowIso(),
-      correlationId: uuid(),
-    };
-
+  app.post("/api/approval", async (req, res) => {
+    const envelope = ApprovalEnvelopeSchema.parse(req.body);
+    const { session_id, title, description, snapshot, actions, rollback_actions } = envelope;
+    
+    // Publish to Kafka
     try {
       await producer.send({
         topic: TOPICS.WORKFLOW_EVENTS,
