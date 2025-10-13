@@ -22,11 +22,24 @@ export const config = {
     },
   },
 
+  postgres: {
+    host: env.get("PGHOST").default("localhost").asString(),
+    port: env.get("PGPORT").default(5432).asPortNumber(),
+    user: env.get("PGUSER").default("postgres").asString(),
+    password: env.get("PGPASSWORD").default("postgres").asString(),
+    database: env.get("PGDATABASE").default("workflows").asString(),
+    poolMax: env.get("PGPOOL_MAX").default("10").asIntPositive(),
+  },
+
   log: {
     level: env.get("LOG_LEVEL").default("info").asEnum(["debug", "info", "warn", "error"]),
   },
 
-  forwader: {
+  materializer: {
+    name: "Materializer"
+  },
+
+  forwarder: {
     port: env.get("FORWARDER_PORT").default("4000").asPortNumber()
   }
 };
