@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev:forwarder": "tsx watch src/forwarder.ts",
+    "dev:materializer": "tsx watch src/materializer.ts",
     "test": "vitest"
   },
   "author": "Raj Anand",
@@ -16,6 +17,7 @@
     "env-var": "^7.5.0",
     "express": "^5.1.0",
     "kafkajs": "^2.2.4",
+    "pg": "^8.16.3",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   },
@@ -23,6 +25,7 @@
     "@types/body-parser": "^1.19.6",
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.2",
+    "@types/pg": "^8.15.5",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
