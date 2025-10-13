@@ -11,11 +11,11 @@ import { errorHandler } from "./middleware/errorHandler.js";
  * ------------------------------------
  * - Ensures Kafka topics exist
  * - Creates a Kafka producer
- * - Exposes POST /events to publish messages to Kafka
+ * - Exposes /api
  *
  */
 
-const PORT = Number(config.forwader.port);
+const PORT = Number(config.forwarder.port);
 
 async function run() {
   const ok = await ensureTopics();
