@@ -1,0 +1,179 @@
+diff --git a/src/materializer.ts b/src/materializer.ts
+index 0ed8d9b..3bbac5d 100644
+--- a/src/materializer.ts
++++ b/src/materializer.ts
+@@ -9,7 +9,7 @@ import { QUERIES } from "./queries.js";
+ const LOG_PREFIX = `[${config.materializer.name}]`;
+ 
+ // No other event is being handled by this kafka topic.
+-const EVENT_TYPE = 'approval_requested'
++const EVENT_TYPE = "approval_requested";
+ 
+ /** --- Postgres pool (from config) --- */
+ const pool = new Pool({
+@@ -46,7 +46,11 @@ function deriveContextId(payload: any) {
+   );
+ }
+ 
+-/* ---------- DB logic ---------- */
++function sleep(ms: number) {
++  return new Promise((resolve) => setTimeout(resolve, ms));
++}
++
++/* ---------- DB logic (uses QUERIES) ---------- */
+ 
+ async function insertEvent(client: any, contextId: string, type: string, payload: any, actor?: string) {
+   await client.query(QUERIES.INSERT_EVENT, [contextId, type, payload, actor ?? "agent"]);
+@@ -69,53 +73,60 @@ async function upsertApprovalRequest(client: any, contextId: string, payload: an
+   ]);
+ }
+ 
+-/* ---------- Message handling ---------- */
+-
+-// Takes approval_requested out of kafka, appends to approval table and events table
+-async function handleMessage(messageValue: Buffer | string | null, headers: Record<string, any> | undefined) {
+-  const raw = messageValue ? messageValue.toString() : null;
+-
+-  const payload = safeParseJson(raw);
+-  if (!payload) {
+-    console.warn(`${LOG_PREFIX} skipping invalid JSON message`);
+-    return;
+-  }
++/* ---------- Transaction with retry ---------- */
+ 
+-  const contextId = deriveContextId(payload);
+-  if (!contextId) {
+-    console.warn(`${LOG_PREFIX} missing context id — skipping message`, { payload });
+-    return;
+-  }
++/**
++ * Runs the provided callback inside a DB transaction, retrying on transient failures.
++ *
++ * @param callback async function that accepts a connected client and performs transactional work
++ * @param opts.maxRetries maximum attempts (default 3)
++ * @param opts.baseDelayMs base backoff in ms (default 200ms)
++ */
++async function runTransactionWithRetries<T>(
++  callback: (client: any) => Promise<T>,
++  opts: { maxRetries?: number; baseDelayMs?: number } = {}
++): Promise<T> {
++  const maxRetries = opts.maxRetries ?? 3;
++  const baseDelayMs = opts.baseDelayMs ?? 200;
+ 
+-  const client = await pool.connect();
+-  let committed = false;
+-  try {
+-    await client.query("BEGIN");
++  let attempt = 0;
++  while (true) {
++    const client = await pool.connect();
++    try {
++      await client.query("BEGIN");
++      const result = await callback(client);
++      await client.query("COMMIT");
++      client.release();
++      return result;
++    } catch (err) {
++      // Attempt rollback, ignore rollback errors
++      try {
++        await client.query("ROLLBACK");
++      } catch (_) {}
++      client.release();
+ 
+-    await insertEvent(client, contextId, EVENT_TYPE, payload, payload?.requester ?? payload?.actor ?? "agent");
+-    await upsertApprovalRequest(client, contextId, payload);
++      attempt += 1;
++      const isLastAttempt = attempt > maxRetries;
++      if (isLastAttempt) {
++        throw err;
++      }
+ 
+-    await client.query("COMMIT");
+-    console.log(`${LOG_PREFIX} processed event=${EVENT_TYPE} context=${contextId}`);
+-  } catch (err) {
+-    await client.query("ROLLBACK");
+-    console.error(`${LOG_PREFIX} DB transaction failed for context=${contextId}`, err);
+-  } finally {
+-    client.release();
+-  }
++      // Exponential backoff with jitter
++      const backoff = baseDelayMs * Math.pow(2, attempt - 1);
++      const jitter = Math.floor(Math.random() * baseDelayMs);
++      const delay = Math.min(backoff + jitter, 5000); // cap delay to 5s
+ 
+-  if (committed) {
+-    try {
+-      await publishApprovalNotification(contextId, payload);
+-    } catch (err) {
+-      console.error(
+-        `${LOG_PREFIX} failed to publish notification for context=${contextId}`,
+-        err
++      console.warn(
++        `${LOG_PREFIX} transaction attempt ${attempt}/${maxRetries} failed — retrying in ${delay}ms`,
++        (err as Error).message ?? err
+       );
++      await sleep(delay);
+     }
+   }
+ }
+ 
++/* ---------- Notification publisher ---------- */
++
+ /**
+  * Publishes a compact approval notification event
+  * after a new approval request has been persisted.
+@@ -155,6 +166,54 @@ async function publishApprovalNotification(contextId: string, payload: any) {
+   );
+ }
+ 
++/* ---------- Message handling ---------- */
++
++// Takes approval_requested out of kafka, appends to approval table and events table
++async function handleMessage(messageValue: Buffer | string | null, headers: Record<string, any> | undefined) {
++  const raw = messageValue ? messageValue.toString() : null;
++
++  const payload = safeParseJson(raw);
++  if (!payload) {
++    console.warn(`${LOG_PREFIX} skipping invalid JSON message`);
++    return;
++  }
++
++  const contextId = deriveContextId(payload);
++  if (!contextId) {
++    console.warn(`${LOG_PREFIX} missing context id — skipping message`, { payload });
++    return;
++  }
++
++  let committed = false;
++  try {
++    // run transactional work with retries
++    await runTransactionWithRetries(
++      async (client) => {
++        await insertEvent(client, contextId, EVENT_TYPE, payload, payload?.requester ?? payload?.actor ?? "agent");
++        await upsertApprovalRequest(client, contextId, payload);
++        // Returning a small marker isn't necessary, success means commit happened.
++        return true;
++      },
++      { maxRetries: 3, baseDelayMs: 200 }
++    );
++
++    committed = true;
++    console.log(`${LOG_PREFIX} processed event=${EVENT_TYPE} context=${contextId}`);
++  } catch (err) {
++    console.error(`${LOG_PREFIX} DB transaction failed for context=${contextId} after retries`, err);
++    return;
++  }
++
++  if (committed) {
++    try {
++      await publishApprovalNotification(contextId, payload);
++    } catch (err) {
++      console.error(`${LOG_PREFIX} failed to publish notification for context=${contextId}`, err);
++      // don't rethrow — materializer continues consuming; consider DLQ for production
++    }
++  }
++}
++
+ /* ---------- Runner ---------- */
+ 
+ async function run() {
