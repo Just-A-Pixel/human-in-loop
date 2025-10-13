@@ -19,6 +19,7 @@ export const config = {
       workflowEvents: env.get("WORKFLOW_EVENTS_TOPIC").default("workflow-events").asString(),
       approvalRequests: env.get("APPROVAL_REQUESTS_TOPIC").default("approval-requests").asString(),
       humanResponses: env.get("HUMAN_RESPONSES_TOPIC").default("human-responses").asString(),
+      notificationRequests: env.get("NOTIFICATION_REQUEST_TOPIC").default("notification-request").asString()
     },
   },
 
