@@ -1,17 +1,17 @@
-import ApprovalsList from './components/ApprovalsList'
+import { type JSX } from "react";
+import ApprovalsList from "./components/ApprovalsList";
+import Layout from "./components/Layout";
 
-export default function App() {
-  const userId = getAuthenticatedUserId()
+export default function App(): JSX.Element {
+  const userId = getAuthenticatedUserId();
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <ApprovalsList userId={userId} />
-      </div>
-    </div>
-  )
+    <Layout>
+      <ApprovalsList userId={userId} />
+    </Layout>
+  );
 }
 
 // Returns "test" user, implement with jwt auth in prod
 function getAuthenticatedUserId() {
-  return "test"
+  return "test";
 }
