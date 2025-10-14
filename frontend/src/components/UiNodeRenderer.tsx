@@ -3,6 +3,17 @@ import ChatBox from "./ChatBox";
 import UnifiedDiffRenderer from "./UnifiedDiffRenderer";
 // import DiffViewer from "./DiffViewer";
 
+import NodeGroup from "./ui/NodeGroup";
+import BoundaryBox from "./ui/BoundaryBox";
+import DefaultNode from "./ui/DefaultNode";
+import FormContainer from "./ui/FormContainer";
+import FieldBlock from "./ui/FieldBlock";
+import ChoiceRow from "./ui/ChoiceRow";
+import RadioLabel from "./ui/RadioLabel";
+import TextareaField from "./ui/TextareaField";
+import InputField from "./ui/InputField";
+import SubmitRow from "./ui/SubmitRow";
+
 export type FieldDef = {
   id: string;
   type: "choice" | "textarea" | "text" | "number" | "checkbox";
@@ -37,12 +48,10 @@ export default function UiNodeRenderer({ node, path = "", onFormSubmit }: UiNode
 
   switch (node.render_type) {
     case "chat-box":
-      console.log(node)
       return <ChatBox text={node.text ?? ""} />;
 
     case "diff":
       return <UnifiedDiffRenderer diffText={node.diff_text || ""} />;
-      
 
     case "form":
       return (
@@ -55,45 +64,27 @@ export default function UiNodeRenderer({ node, path = "", onFormSubmit }: UiNode
 
     case "group":
     case "section":
-      return (
-        <div className="space-y-3">
-          {node.title && <div className="text-sm font-semibold mb-1">{node.title}</div>}
-          <div className="space-y-4">
-            {(node.children || []).map((child: UiNode, i: number) => (
-              <UiNodeRenderer key={child.id ?? i} node={child} path={nodePath} onFormSubmit={onFormSubmit} />
-            ))}
-          </div>
-        </div>
-      );
+      return <NodeGroup title={node.title}>{(node.children || []).map((child: UiNode, i: number) => (
+        <UiNodeRenderer key={child.id ?? i} node={child} path={nodePath} onFormSubmit={onFormSubmit} />
+      ))}</NodeGroup>;
 
-      case "boundary":
-       return (
-         <div className="p-3 border border-slate-200 rounded-lg bg-slate-50">
-           {node.title && <div className="text-sm font-semibold mb-2 text-slate-600">{node.title}</div>}
-           <div className="space-y-3">
-             {(node.children || []).map((child: UiNode, i: number) => (
-               <UiNodeRenderer
-                 key={child.id ?? i}
-                 node={child}
-                 path={nodePath}
-                 onFormSubmit={onFormSubmit}
-               />
-             ))}
-           </div>
-         </div>
-       );     
+    case "boundary":
+      return (
+        <BoundaryBox title={node.title}>
+          {(node.children || []).map((child: UiNode, i: number) => (
+            <UiNodeRenderer key={child.id ?? i} node={child} path={nodePath} onFormSubmit={onFormSubmit} />
+          ))}
+        </BoundaryBox>
+      );
 
     // add more container render types e.g. 'accordion', 'tabs', 'list'
     default:
-      // unknown node: render text if present or render children
       return (
-        <div>
-          {node.title && <div className="font-medium">{node.title}</div>}
-          {node.text && <div className="whitespace-pre-wrap">{node.text}</div>}
+        <DefaultNode title={node.title} text={node.text}>
           {(node.children || []).map((c, i) => (
             <UiNodeRenderer key={c.id ?? i} node={c} path={nodePath} onFormSubmit={onFormSubmit} />
           ))}
-        </div>
+        </DefaultNode>
       );
   }
 }
@@ -128,47 +119,45 @@ function FormNode({ node, path, onSubmit }: { node: UiNode; path: string; onSubm
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 p-3 bg-white rounded-md border">
-      {node.title && <div className="text-sm font-semibold">{node.title}</div>}
+    <FormContainer title={node.title}>
       {fields.map((f) => {
         const fid = `${uid}.${f.id}`;
         const val = values[f.id] ?? "";
         if (f.type === "choice") {
           return (
             <div key={fid}>
-              <label className="block text-sm font-medium">{f.label ?? f.id}</label>
-              <div className="flex gap-3 mt-2">
-                {(f.options || []).map((opt) => (
-                  <label key={opt} className="inline-flex items-center gap-2">
-                    <input type="radio" name={fid} checked={val === opt} onChange={() => setField(f.id, opt)} />
-                    <span className="text-sm">{opt}</span>
-                  </label>
-                ))}
-              </div>
+              <FieldBlock label={f.label ?? f.id}>
+                <ChoiceRow>
+                  {(f.options || []).map((opt) => (
+                    <RadioLabel key={opt}>
+                      <input type="radio" name={fid} checked={val === opt} onChange={() => setField(f.id, opt)} />
+                      <span className="text-sm">{opt}</span>
+                    </RadioLabel>
+                  ))}
+                </ChoiceRow>
+              </FieldBlock>
             </div>
           );
         } else if (f.type === "textarea") {
           return (
             <div key={fid}>
-              <label className="block text-sm font-medium">{f.label ?? f.id}</label>
-              <textarea value={val} onChange={(e) => setField(f.id, e.target.value)} className="w-full rounded-md border p-2 mt-1" />
+              <FieldBlock label={f.label ?? f.id}>
+                <TextareaField value={val} onChange={(v) => setField(f.id, v)} />
+              </FieldBlock>
             </div>
           );
         } else {
           return (
             <div key={fid}>
-              <label className="block text-sm font-medium">{f.label ?? f.id}</label>
-              <input value={val} onChange={(e) => setField(f.id, e.target.value)} className="w-full rounded-md border p-2 mt-1" />
+              <FieldBlock label={f.label ?? f.id}>
+                <InputField value={val} onChange={(v) => setField(f.id, v)} />
+              </FieldBlock>
             </div>
           );
         }
       })}
 
-      <div className="flex justify-end">
-        <button type="button" onClick={() => handleSubmit()} className="px-3 py-1 bg-indigo-600 text-white rounded">
-          Submit
-        </button>
-      </div>
-    </form>
+      <SubmitRow onClick={() => handleSubmit()} />
+    </FormContainer>
   );
 }
