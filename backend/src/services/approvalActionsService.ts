@@ -47,40 +47,12 @@ export async function performApprovalAction(opts: {
     webhookUrl = null;
   }
 
-  let webhookResult: any = null;
+  let webhookResult = null;
   if (webhookUrl) {
     try {
-      const payload = {
-        context_id: contextId,
-        status: newStatus,
-        action,
-        actor,
-        notes: notes ?? null,
-        timestamp: new Date().toISOString(),
-      };
-      // POST JSON
-      const r = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        // optionally set a short timeout / signal in production
-      });
-      webhookResult = { ok: r.ok, status: r.status };
-    } catch (err: any) {
-      webhookResult = { ok: false, error: String(err) };
-      console.error("[approvalActionsService] webhook call failed", contextId, webhookUrl, err);
-    }
-
-    // Log webhook result into events table (non-transactional; best-effort)
-    try {
-      await pool.query(QUERIES.INSERT_EVENT, [
-        contextId,
-        "webhook_notification",
-        { webhookUrl, result: webhookResult, timestamp: new Date().toISOString() },
-        "system",
-      ]);
+      webhookResult = await sendEventToWebhook(webhookUrl, contextId, newStatus, action, actor, notes)
     } catch (err) {
-      console.warn("[approvalActionsService] failed to record webhook event", err);
+      console.warn(err)
     }
   }
 
@@ -92,4 +64,43 @@ export async function performApprovalAction(opts: {
     webhookResult,
     updated_at: updatedRow?.updated_at ?? new Date().toISOString(),
   };
+}
+
+async function sendEventToWebhook(webhookUrl: string, contextId: string, newStatus: "rollback" | "approved" | "denied", action: Action, actor: string, notes: string) {
+  let res = null
+  try {
+    const payload = {
+      context_id: contextId,
+      status: newStatus,
+      action,
+      actor,
+      notes: notes ?? null,
+      timestamp: new Date().toISOString(),
+    };
+    // POST JSON
+    const r = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      // optionally set a short timeout / signal in production
+    });
+    res = { ok: r.ok, status: r.status };
+  } catch (err: any) {
+    res = { ok: false, error: String(err) };
+    console.error("[approvalActionsService] webhook call failed", contextId, webhookUrl, err);
+  }
+
+  // Log webhook result into events table (non-transactional; best-effort)
+  try {
+    await pool.query(QUERIES.INSERT_EVENT, [
+      contextId,
+      "webhook_notification",
+      { webhookUrl, result: res, timestamp: new Date().toISOString() },
+      "system",
+    ]);
+  } catch (err) {
+    console.warn("[approvalActionsService] failed to record webhook event", err);
+  }
+
+  return res
 }
