@@ -2,6 +2,8 @@
 import type { Producer } from "kafkajs";
 import { ApprovalEnvelopeSchema } from "../envelope.js";
 import type { ApprovalEnvelope } from "../envelope.js";
+import { pool } from "../postgres.js";
+import { QUERIES } from "../queries.js";
 
 /**
  * Validate the incoming envelope using Zod.safeParse.
@@ -105,4 +107,43 @@ export async function publishApproval(opts: { producer: Producer; envelopeBody: 
     accepted: true,
     payload: acceptedResponse(envelope),
   };
+}
+
+/**
+ * Fetch all approval requests assigned to a given approver.
+ *
+ * @param opts.approverName - the approver identifier (mapped to approvals.approver_name)
+ * @param opts.limit (optional) - page size
+ * @param opts.offset (optional) - pagination offset
+ *
+ * Returns { ok: true, approvals: [...] } or { ok: false, error }
+ */
+export async function getAllRequests(opts: {
+  approverName: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const { approverName, limit, offset } = opts;
+
+  if (!approverName || approverName.trim() === "") {
+    return { ok: false as const, error: new Error("approverName is required") };
+  }
+
+  try {
+    // Currently using the SELECT_APPROVALS_BY_APPROVER query which orders by created_at desc
+    // If you want pagination, you can extend the query to include LIMIT/OFFSET and pass limit/offset.
+    const clientResult = await pool.query(QUERIES.SELECT_APPROVALS_BY_APPROVER, [
+      approverName,
+      limit ?? null,
+      offset ?? null,
+    ]);
+
+    // rows contain the approvals fields specified by the query
+    const approvals = clientResult.rows ?? [];
+
+    return { ok: true as const, approvals };
+  } catch (err: any) {
+    console.error("[forwarderService] getAllRequests error", err);
+    return { ok: false as const, error: err };
+  }
 }
