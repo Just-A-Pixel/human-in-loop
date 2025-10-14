@@ -38,27 +38,41 @@ export const QUERIES = {
    WHERE context_id = $2;
  `,
 
- /* NEW: select approvals by approver (with optional status); returns total count and rows */
+ /**
+   * Select approvals by approver name or user_id.
+   *
+   * Parameters:
+   *   $1 = approver_name (text)
+   *   $2 = LIMIT (optional)
+   *   $3 = OFFSET (optional)
+   *
+   * This can be used with or without pagination.
+   */
  SELECT_APPROVALS_BY_APPROVER: `
  SELECT
-   context_id,
-   approver_name,
-   title,
-   deadline,
-   turns,
-   snapshot,
-   status,
-   created_at,
-   updated_at
- FROM approvals
- WHERE approver_name = $1
- ORDER BY created_at DESC
+   a.context_id,
+   a.approver_name,
+   a.title,
+   a.deadline,
+   a.turns,
+   a.snapshot,
+   a.status,
+   a.created_at,
+   a.updated_at
+ FROM approvals a
+ WHERE a.approver_name = $1
+ AND a.status IN ('pending', 'approval_requested')
+ ORDER BY a.created_at DESC
+ LIMIT COALESCE($2::int, 100)
+ OFFSET COALESCE($3::int, 0);
 `,
 
-// To enable pagination
-//  
-//  LIMIT $2
-//  OFFSET $3;
-
+/** Read approval (by context_id) */
+SELECT_APPROVAL_BY_CONTEXT: `
+SELECT context_id, approver_name, title, deadline, turns, snapshot, status, created_at, updated_at
+FROM approvals
+WHERE context_id = $1
+LIMIT 1;
+`,
 
 };
