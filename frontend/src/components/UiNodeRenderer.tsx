@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import ChatBox from "./ChatBox";
 import UnifiedDiffRenderer from "./UnifiedDiffRenderer";
-// import DiffViewer from "./DiffViewer";
 
 import NodeGroup from "./ui/NodeGroup";
 import BoundaryBox from "./ui/BoundaryBox";
@@ -10,7 +9,7 @@ import FormContainer from "./ui/FormContainer";
 import FieldBlock from "./ui/FieldBlock";
 import ChoiceRow from "./ui/ChoiceRow";
 import RadioLabel from "./ui/RadioLabel";
-import TextareaField from "./ui/TextareaField";
+import TextareaField from "./ui/TextAreaField";
 import InputField from "./ui/InputField";
 import SubmitRow from "./ui/SubmitRow";
 
