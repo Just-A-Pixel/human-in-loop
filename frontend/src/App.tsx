@@ -1,6 +1,6 @@
 import { type JSX } from "react";
 import ApprovalsList from "./components/ApprovalsList";
-import Layout from "./components/Layout";
+import Layout from "./components/ui/Layout";
 
 export default function App(): JSX.Element {
   const userId = getAuthenticatedUserId();
