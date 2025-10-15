@@ -1,10 +1,21 @@
 // src/services/approvalActionsService.ts
-import fetch from "node-fetch";
-import { pool, withTransaction } from "../postgres.js";
+import { getProducer, TOPICS } from "../kafka.js";
+import { uuid, nowIso } from "../util.js";
+import { pool } from "../postgres.js";
 import { QUERIES } from "../queries.js";
+import type { Producer } from "kafkajs";
 
 type Action = "approve" | "deny" | "rollback";
 
+/**
+ * Publish a human action to Kafka (publish-first pattern).
+ *
+ * Minimal change: instead of updating DB directly, we publish an event to Kafka
+ * so a consumer can persist the change and trigger webhooks. This keeps the
+ * service lightweight and scales better.
+ *
+ * Returns { ok: true, queued: true, event } on success, or { ok: false, error }.
+ */
 export async function performApprovalAction(opts: {
   contextId: string;
   action: Action;
@@ -12,95 +23,45 @@ export async function performApprovalAction(opts: {
   notes?: string;
 }) {
   const { contextId, action, actor = "human", notes } = opts;
-  const newStatus = action === "approve" ? "approved" : action === "deny" ? "denied" : "rollback";
 
-  // Run DB transaction to update approval status and insert an event
-  let snapshot: any = null;
-  let updatedRow: any = null;
-
-  await withTransaction(async (client) => {
-    // 1) update approvals.status
-    const res = await client.query(QUERIES.UPDATE_APPROVAL_STATUS, [newStatus, contextId]);
-    updatedRow = res.rows[0];
-
-    // 2) insert audit event (type 'human_action' with action metadata)
-    const eventPayload = {
-      action,
-      actor,
-      notes: notes ?? null,
-      timestamp: new Date().toISOString(),
-    };
-    await client.query(QUERIES.INSERT_EVENT, [contextId, "human_action", eventPayload, actor]);
-
-    snapshot = updatedRow?.snapshot ?? null;
-    // commit happens after this function returns
-  });
-
-  // After commit: if there is a webhook in snapshot, call it (fire-and-log)
-  // snapshot may be JSONB stored; common paths: snapshot.webhook or snapshot.metadata.webhook
-  let webhookUrl: string | null = null;
-  try {
-    if (snapshot) {
-      webhookUrl = snapshot.webhook ?? null;
-    }
-  } catch (err) {
-    webhookUrl = null;
+  if (!contextId || typeof contextId !== "string") {
+    return { ok: false as const, error: new Error("contextId required") };
   }
 
-  let webhookResult = null;
-  if (webhookUrl) {
-    try {
-      webhookResult = await sendEventToWebhook(webhookUrl, contextId, newStatus, action, actor, notes)
-    } catch (err) {
-      console.warn(err)
-    }
-  }
-
-  return {
-    ok: true,
+  // Build the event payload
+  const event = {
+    event_id: uuid(),
+    eventType: "human_action",
     context_id: contextId,
-    status: newStatus,
-    webhookCalled: Boolean(webhookUrl),
-    webhookResult,
-    updated_at: updatedRow?.updated_at ?? new Date().toISOString(),
+    action,
+    actor,
+    notes: notes ?? null,
+    timestamp: nowIso(),
   };
-}
 
-async function sendEventToWebhook(webhookUrl: string, contextId: string, newStatus: "rollback" | "approved" | "denied", action: Action, actor: string, notes: string) {
-  let res = null
+  // Publish to Kafka
   try {
-    const payload = {
-      context_id: contextId,
-      status: newStatus,
-      action,
-      actor,
-      notes: notes ?? null,
-      timestamp: new Date().toISOString(),
-    };
-    // POST JSON
-    const r = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      // optionally set a short timeout / signal in production
+    const producer: Producer = await getProducer(); // uses default client id
+    await producer.send({
+      topic: TOPICS.HUMAN_RESPONSES,
+      messages: [
+        {
+          key: contextId,
+          value: JSON.stringify(event),
+          headers: { source: "approvalActionsService", eventType: "human_action" },
+        },
+      ],
+      acks: -1,
     });
-    res = { ok: r.ok, status: r.status };
+
+    // Successfully queued
+    return {
+      ok: true as const,
+      queued: true as const,
+      event,
+    };
   } catch (err: any) {
-    res = { ok: false, error: String(err) };
-    console.error("[approvalActionsService] webhook call failed", contextId, webhookUrl, err);
+    console.error("[approvalActionsService]AAAA failed to publish human_action", err);
+    return { ok: false as const, error: err };
   }
-
-  // Log webhook result into events table (non-transactional; best-effort)
-  try {
-    await pool.query(QUERIES.INSERT_EVENT, [
-      contextId,
-      "webhook_notification",
-      { webhookUrl, result: res, timestamp: new Date().toISOString() },
-      "system",
-    ]);
-  } catch (err) {
-    console.warn("[approvalActionsService] failed to record webhook event", err);
-  }
-
-  return res
 }
