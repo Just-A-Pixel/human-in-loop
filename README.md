@@ -20,7 +20,10 @@
 
 ## Design Thinking
 
-This section covers the raw thought process that led to the final design - a multi-agent, multi-human setup.
+This section covers the raw thought process that led to the final design - a multi-agent, multi-human setup:
+
+<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/394f3a20-cc87-4d81-8e0c-252713f650ee" />
+
 
 We have two actors - **AI Agents** and **human approvers**.
 
@@ -78,6 +81,7 @@ More workers can easily be added to add new async tasks.
  4. If required, can have dedicated workers handling one type of channel.
 
 #### 5. The frontend
+
 
 
 
