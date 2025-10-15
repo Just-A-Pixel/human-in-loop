@@ -11,7 +11,7 @@ const LOG_PREFIX = `[${config.materializer.name}]`;
 const EVENT_TYPE = "approval_requested";
 
 /** --- Kafka consumer --- */
-const consumer = await createConsumer(config.kafka.groupId, [TOPICS.WORKFLOW_EVENTS], false);
+const consumer = await createConsumer(config.kafka.groupId_agents, [TOPICS.WORKFLOW_EVENTS], false);
 
 /* ---------- Utility helpers ---------- */
 

@@ -159,7 +159,7 @@ async function run() {
   if (!ok) process.exit(1);
 
   // create consumer subscribed to the human responses topic
-  const consumer = await createConsumer("orchestrator-group-2", [TOPICS.HUMAN_RESPONSES], false);
+  const consumer = await createConsumer(config.kafka.groupId_humans, [TOPICS.HUMAN_RESPONSES], false);
   await consumer.run({
     eachMessage: async ({ message }) => {
       try {

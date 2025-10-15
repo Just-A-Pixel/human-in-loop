@@ -14,9 +14,8 @@ CREATE TABLE approvals (
 
 CREATE TABLE users (
   user_id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  username text NOT NULL UNIQUE,
+  username text UNIQUE,
   display_name text,
-  channels text[] DEFAULT ARRAY['email'],
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -30,5 +29,24 @@ CREATE TABLE events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Can add more columns as more channels are supported
+CREATE TABLE channels (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  username text UNIQUE,
+  n8n text UNIQUE,
+  email text UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE INDEX idx_approvals_status_deadline ON approvals (status, deadline);
 CREATE INDEX idx_approvals_snapshot_gin ON approvals USING gin (snapshot jsonb_path_ops);
+
+-- Insert default test user
+INSERT INTO users (username, display_name)
+VALUES ('test', 'Test User')
+ON CONFLICT (username) DO NOTHING;
+
+-- Insert default n8n notification webhook for demo
+INSERT INTO channels (username, n8n)
+VALUES ('test', 'http://host.docker.internal:5678/webhook-test/5a92773c-8f1b-4366-adb2-fa22ee4f495e');

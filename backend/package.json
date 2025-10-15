@@ -8,6 +8,7 @@
     "dev:forwarder": "tsx watch src/forwarder.ts",
     "dev:materializer_agents": "tsx watch src/materializer_agents.ts",
     "dev:materializer_humans": "tsx watch src/materializer_humans.ts",
+    "dev:materializer_notifications": "tsx watch src/materializer_notifications.ts",
     "test": "vitest"
   },
   "author": "Raj Anand",

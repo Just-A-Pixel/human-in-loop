@@ -14,7 +14,9 @@ export const config = {
   kafka: {
     broker: env.get("KAFKA_BROKER").default("localhost:29092").asString(),
     clientId: env.get("KAFKA_CLIENT_ID").default("human-in-loop-client").asString(),
-    groupId: env.get("KAFKA_GROUP_ID").default("orchestrator-group").asString(),
+    groupId_agents: env.get("KAFKA_GROUP_ID_AGENTS").default("orchestrator-group-1").asString(),
+    groupId_humans: env.get("KAFKA_GROUP_ID_HUMANS").default("orchestrator-group-2").asString(),
+    groupId_notifications: env.get("KAFKA_GROUP_ID_NOTIFICATIONS").default("orchestrator-group-3").asString(),
     topics: {
       workflowEvents: env.get("WORKFLOW_EVENTS_TOPIC").default("workflow-events").asString(),
       approvalRequests: env.get("APPROVAL_REQUESTS_TOPIC").default("approval-requests").asString(),
