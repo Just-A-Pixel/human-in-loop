@@ -21,7 +21,6 @@ export const KAFKA_GROUP_ID = config.kafka.groupId;
 
 export const TOPICS = {
   WORKFLOW_EVENTS: config.kafka.topics.workflowEvents,
-  APPROVAL_REQUESTS: config.kafka.topics.approvalRequests,
   HUMAN_RESPONSES: config.kafka.topics.humanResponses,
   NOTIFICATION_EVENTS: config.kafka.topics.notificationRequests
 } as const;
@@ -106,8 +105,8 @@ export async function ensureTopics(): Promise<boolean> {
 
   const topics = [
     { topic: TOPICS.WORKFLOW_EVENTS, numPartitions: 3, replicationFactor: 1 },
-    { topic: TOPICS.APPROVAL_REQUESTS, numPartitions: 3, replicationFactor: 1 },
     { topic: TOPICS.HUMAN_RESPONSES, numPartitions: 3, replicationFactor: 1 },
+    { topic: TOPICS.NOTIFICATION_EVENTS, numPartitions: 3, replicationFactor: 1 },
   ];
 
   try {

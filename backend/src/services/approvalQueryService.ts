@@ -1,5 +1,6 @@
 // src/services/approvalQueryService.ts
 import { pool } from "../postgres.js";
+import { QUERIES } from "../queries.js";
 
 /**
  * Retrieve approval status by context_id.
@@ -15,7 +16,7 @@ export async function getApprovalStatus(contextId: string) {
 
   try {
     const q = await pool.query(
-      `SELECT context_id, status, updated_at FROM approvals WHERE context_id = $1 LIMIT 1;`,
+      QUERIES.SELECT_APPROVAL_BY_CONTEXT,
       [contextId]
     );
 
