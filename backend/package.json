@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev:forwarder": "tsx watch src/forwarder.ts",
-    "dev:materializer": "tsx watch src/materializer.ts",
-    "dev:materializer_actions": "tsx watch src/materializer_actions.ts",
+    "dev:materializer_agents": "tsx watch src/materializer_agents.ts",
+    "dev:materializer_humans": "tsx watch src/materializer_humans.ts",
     "test": "vitest"
   },
   "author": "Raj Anand",
