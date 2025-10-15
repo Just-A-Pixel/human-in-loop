@@ -25,14 +25,6 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  
-  mailhog:
-    image: mailhog/mailhog:latest
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI (http)
-    environment:
-      MH_STORAGE: maildir
 
   postgres:
     image: postgres:15
@@ -60,6 +52,112 @@ services:
       - "8080:80"
     depends_on:
       - postgres
+
+ # ---------- Node services (dev) ----------
+  forwarder:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+      - /app/node_modules
+    ports:
+      - "4000:4000"   # forwarder port (matches FORWARDER_PORT default 4000)
+    environment:
+      # App config (override if you prefer .env)
+      NODE_ENV: development
+      # FORWARDER_PORT: 4000
+
+      # Kafka - inside docker use the container broker address
+      KAFKA_BROKER: kafka:9092
+
+      # Postgres (point inside network at postgres service)
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: workflows
+      PGPOOL_MAX: "10"
+
+      LOG_LEVEL: info
+    depends_on:
+      - kafka
+      - postgres
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:forwarder"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4000 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  
+  materializer-agents:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+      - /app/node_modules
+    # no ports exposed (materializer runs workers, not an HTTP server)
+    environment:
+      NODE_ENV: development
+
+      # Kafka (use compose service name + container port)
+      KAFKA_BROKER: kafka:9092
+
+      # Postgres (inside compose)
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: workflows
+      PGPOOL_MAX: "10"
+
+      LOG_LEVEL: info
+      # optional identifier used in your app logs
+      MATERIALIZER_NAME: MaterializerAgents
+    depends_on:
+      - kafka
+      - postgres
+    # Wait for kafka and postgres TCP ports to be reachable, then install deps and run watcher
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:materializer_agents"
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep node || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  materializer-humans:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+      - /app/node_modules
+    # no ports exposed (materializer runs workers, not an HTTP server)
+    environment:
+      NODE_ENV: development
+
+      # Kafka (use compose service name + container port)
+      KAFKA_BROKER: kafka:9092
+
+      # Postgres (inside compose)
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: workflows
+      PGPOOL_MAX: "10"
+
+      LOG_LEVEL: info
+      # optional identifier used in your app logs
+      MATERIALIZER_NAME: MaterializerHumans
+    depends_on:
+      - kafka
+      - postgres
+    # Wait for kafka and postgres TCP ports to be reachable, then install deps and run watcher
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:materializer_humans"
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep node || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 volumes:
   pgdata:
