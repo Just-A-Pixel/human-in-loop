@@ -187,3 +187,21 @@ If channel is not null => user can be notified via that channel
 8. A dedicated component library for making UI with a scaled mapper and automated documentation generation - as UI documentation will be a big part of customer experience and UI-schema will most likely be made by AI agent.
 9. A dedicated cron job that clears approvals that have crossed deadlines. Again, using the existing design, this can be an async worker added between db and kafka. 
 10. Merge the recent 'Update README' commits. 
+
+## Steps to run
+```
+To start backend
+
+cd backend
+docker compose up
+
+To start frontend
+cd frontend
+npm i
+npm run dev
+```
+
+## Hosting
+```
+While this project is not available as a cloud service at the moment, dockerized application provides it being deployed easily on private infrastructures.
+```
