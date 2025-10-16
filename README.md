@@ -22,7 +22,7 @@
 
 This section covers the raw thought process that led to the final design - a multi-agent, multi-human setup:
 
-<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/394f3a20-cc87-4d81-8e0c-252713f650ee" />
+<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/5fc02159-93de-4e91-9a93-a3d44cb46bd0" />
 
 
 We have two actors - **AI Agents** and **human approvers**.
@@ -118,6 +118,17 @@ The request payload now looks like this:
                         }
                       ]
                 }
+              },
+              {
+                "role": "Agent",
+                "ui_schema": {
+                      "render_type": "boundary", "text": "Deploying to prod",
+                      "children": [
+                        { "render_type": "diff",
+                          "diff_text": "sample s3 link to diff.patch file"   // The diff is ideally an s3 link for a diff.patch file. Demo uses a local sample. 
+                        }  
+                      ]
+                }
               }
           ],
           ....                                                               // Remaining data that the AI agent needs to rehydrate state.
@@ -127,9 +138,16 @@ The request payload now looks like this:
 
 ```
 
+Snapshot can also contain optional rollback step that can be shown to the user. 
+
+Output of the example payload in UI:
+
+<img width="913" height="919" alt="image" src="https://github.com/user-attachments/assets/23c0b1cf-960c-48ce-9f95-915f1a402752" />
+
 
 ## Things that can be further improved
 1. Improved unit test coverage
 2. Dedicated metrics dashboard (For example, using Elastic stack with Kibana)
 3. Using write back cache
+4. Rate limiting
 
