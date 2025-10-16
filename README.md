@@ -17,6 +17,7 @@
 
 
 Video of demo: https://drive.google.com/file/d/1pJAxS5mzj7XJZ7bKxepUw-NxvWRQyweX/view?usp=sharing
+n8n webhook is used for notifications in both cases - notifying human and notifying ai agent. 
 
 ## Design Thinking
 
@@ -68,9 +69,9 @@ On failure, currently data is logged on console. We can extend it to have a dedi
 Having one materializer for one task enables granular control on horizontally scaling a specific materializer based on event throughput. 
 
 4 materializers were identified:
-1. Handle ai agent requests (Implemented)  --> Write to DB and push notification event to queue
-2. Update approval status (Implemented)  --> Human approvals are updated here
-3. Handle notification events 
+1. Handle ai agent requests  --> Write to DB and push notification event to queue
+2. Update approval status  --> Human approvals are updated here
+3. Handle notification events  --> All notification workers are here
 4. Handle event log requests - Can be a mix between transactional db writes and queue events as the system scales.
 
 More workers can easily be added to add new async tasks. 
@@ -78,9 +79,8 @@ More workers can easily be added to add new async tasks.
 #### 4. A human gets notified 
 
 1. Pulls notification events from queue
-2. Gets corresponding user data and json array of accepted communication channels
+2. Gets corresponding user data and valid notifications channels from a `channels` table. (For demo, n8n webhook is used for notifying via emails)
 3. Starts async task corresponding to each channel, resolves with Promise.all() - scaled horizontally. Alternatively, each channel can have its own dedicated worker. 
-4. If required, can have dedicated workers handling one type of channel.
 
 #### 5. The frontend
 
@@ -149,11 +149,19 @@ Output of the example payload in UI:
 
 <img width="913" height="919" alt="image" src="https://github.com/user-attachments/assets/23c0b1cf-960c-48ce-9f95-915f1a402752" />
 
+#### 6. Updating approval
+
+1. Approval request is sent to forwarder.
+2. Published into `human-approvals` topic in kafka.
+3. Consumed by `materializer_humans`, updates db and publishes webhook to `notification-events` topic, if present. (For demo, this is a direct call to webhook, but can be easily refactored similar to "A human gets notified" step). We publish the snapshot data with the webhook, which the AI can use to rehydrate. 
+4. If no webhook is present, AI agent can make a request for status update at `GET /api/approval/{contextId}/status`, and get snapshot data as well. 
 
 ## Things that can be further improved
-1. Improved unit test coverage
-2. Dedicated metrics dashboard (For example, using Elastic stack with Kibana)
-3. Using write back cache
-4. Rate limiting
+1. Improved unit test coverage and type safety
+2. Dedicated metrics dashboard and service monitoring (For example, using Elastic stack with Kibana)
+3. Using cache-aside caching for loading UI with write-through caching for writes. 
+4. Rate limiting, especially useful for controlling rate of AI requests.
+5. Load balancer with consistent hashing
+6. A dedicated component library for making UI with a scaled mapper and automated documentation generation - as UI documentation will be a big part of customer experience and UI-schema will most likely be made by AI agent. 
 
 
