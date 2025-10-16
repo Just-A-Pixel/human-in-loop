@@ -169,7 +169,7 @@ Output of the example payload in UI:
 3. Using cache-aside caching for loading UI with write-through caching for writes. 
 4. Rate limiting, especially useful for controlling rate of AI requests.
 5. Load balancer with consistent hashing
-6. User master-slave nodes for DB writes
+6. Using master-slave nodes for DB writes - relying on eventual consistency for having partitions and availibility.
 7. Implementing user authentication. We can use JWT.
 8. A dedicated component library for making UI with a scaled mapper and automated documentation generation - as UI documentation will be a big part of customer experience and UI-schema will most likely be made by AI agent. 
 
