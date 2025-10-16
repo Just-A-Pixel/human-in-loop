@@ -96,7 +96,7 @@ The main challenge here is having a dynamic, yet controlled UI.
 We will show the human the last few turns of the conversation. As for UI, we will use an n-ary tree based UI schema, where each node maps to a UI component we own. 
 The n-ary tree schema will be sent in the request payload.
 
-The request payload now looks like this:
+The request payload that the AI agent will send now looks like this:
 
 ```
 {
