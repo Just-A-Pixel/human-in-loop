@@ -30,7 +30,8 @@ n8n webhook is used for notifications in both cases - notifying human and notify
 
 This section covers the raw thought process that led to the final design - a multi-agent, multi-human setup:
 
-<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/5fc02159-93de-4e91-9a93-a3d44cb46bd0" />
+<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/add3b1ef-7097-423b-ae5d-c60470504e03" />
+
 
 
 We have two actors - **AI Agents** and **human approvers**.
