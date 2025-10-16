@@ -63,6 +63,8 @@ Requests from AI Agent comes here
 2. Write to DB with transaction and retries/ Send notifications / Other async tasks
 3. (If required) Push new asynchronous events to queue (a different kafka topic)
 
+On failure, currently data is logged on console. We can extend it to have a dedicated metrics emitter and a DLQ.
+
 Having one materializer for one task enables granular control on horizontally scaling a specific materializer based on event throughput. 
 
 4 materializers were identified:
@@ -77,7 +79,7 @@ More workers can easily be added to add new async tasks.
 
 1. Pulls notification events from queue
 2. Gets corresponding user data and json array of accepted communication channels
-3. Starts async task corresponding to each channel, resolves with Promise.all() - scaled horizontally
+3. Starts async task corresponding to each channel, resolves with Promise.all() - scaled horizontally. Alternatively, each channel can have its own dedicated worker. 
 4. If required, can have dedicated workers handling one type of channel.
 
 #### 5. The frontend
@@ -131,9 +133,12 @@ The request payload now looks like this:
                 }
               }
           ],
-          ....                                                               // Remaining data that the AI agent needs to rehydrate state.
+          "webhook": "callback woobhook here",    // Notify the AI agent approval is done. If not provided, AI can request update on api/approval/{contextId}/status 
+
+           ....                                                               // Remaining data that the AI agent needs to rehydrate state.
 
     }
+  
 }
 
 ```
