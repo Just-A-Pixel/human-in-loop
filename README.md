@@ -164,6 +164,18 @@ Output of the example payload in UI:
 3. Consumed by `materializer_humans`, updates db and publishes webhook to `notification-events` topic, if present. (For demo, this is a direct call to webhook, but can be easily refactored similar to "A human gets notified" step). We publish the snapshot data with the webhook, which the AI can use to rehydrate. 
 4. If no webhook is present, AI agent can make a request for status update at `GET /api/approval/{contextId}/status`, and get snapshot data as well. 
 
+
+#### 7. DB schema
+Detailed schema is in this file: https://github.com/Just-A-Pixel/human-in-loop/blob/main/backend/migrations/001_init_schema.sql
+
+High level overview:
+***approvals table** --> Approval requests, approver details, and json snapshot. Additionally, contextId and turns column added for simpler querying.
+***events table*** --> stores logs for auditing and tracking status of approvals
+***users table*** --> Stores users which will be filled via auth mechanishm
+***channels table*** --> Users with corresponding channel columns (email, whatsapp, etc) that can be added/removed based on support. 
+If channel is not null => user can be notified via that channel
+***
+
 ## Things that can be further improved
 1. Improved unit test coverage and type safety
 2. Dedicated metrics dashboard and service monitoring (For example, using Elastic stack with Kibana)
