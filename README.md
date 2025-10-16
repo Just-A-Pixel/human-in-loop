@@ -18,6 +18,13 @@
 
 Video of demo: https://drive.google.com/file/d/1pJAxS5mzj7XJZ7bKxepUw-NxvWRQyweX/view?usp=sharing
 n8n webhook is used for notifications in both cases - notifying human and notifying ai agent. 
+***What's happening in the video?***
+1. Activate n8n webhook to listen to notification event.
+2. Send a post request to `api/approval`. Payload details can be found in Design Thinking section.
+3. My email gets updated that there is a new approval.
+4. Restart n8n webhook (it closes after one use in test, and I can use only one in a workflow).
+5. Hit approve. Request gets queued and frontend polls for update until SLE expiration.
+6. Approval status updated, corresponding AI agent webhook (again, n8n in this case) gets notified.
 
 ## Design Thinking
 
