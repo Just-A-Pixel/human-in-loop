@@ -30,9 +30,7 @@ n8n webhook is used for notifications in both cases - notifying human and notify
 
 This section covers the raw thought process that led to the final design - a multi-agent, multi-human setup:
 
-<img width="1051" height="696" alt="image" src="https://github.com/user-attachments/assets/add3b1ef-7097-423b-ae5d-c60470504e03" />
-
-
+<img width="1577" height="1044" alt="image" src="https://github.com/user-attachments/assets/4c1d5ba3-fa29-4cd6-8061-4e6ba13a9ba9" />
 
 We have two actors - **AI Agents** and **human approvers**.
 
@@ -48,6 +46,8 @@ First thought - write it in DB. But at scale, implementing retries and potential
 Resolution - push to an `asynchronous event queue` and return success status (ideally 202 - queued). 
 We shall use `Kafka` for our queue. Kafka is suitable for a high-throughput, distributed streaming platform ideal for real-time data pipelines. 
 In places where a flexible message broker is required (handling notifications, for example) we can also explore using `RabbitMQ` at scale alongside kafka. In RabbitMQ, the producer sends and monitors if the message reaches the intended consumer.  
+
+Note: In production, there should be a load balancer.
 
 ### Kafka
 
