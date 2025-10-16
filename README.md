@@ -182,7 +182,7 @@ If channel is not null => user can be notified via that channel
 3. Using cache-aside caching for loading UI with write-through caching for writes. 
 4. Rate limiting, especially useful for controlling rate of AI requests.
 5. Load balancer with consistent hashing
-6. Using master-slave nodes for DB writes - relying on eventual consistency for having partitions and availibility.
+6. Using master-slave nodes for DB writes - relying on eventual consistency for having partitions and availability.
 7. Implementing user authentication. We can use JWT.
 8. A dedicated component library for making UI with a scaled mapper and automated documentation generation - as UI documentation will be a big part of customer experience and UI-schema will most likely be made by AI agent.
 9. A dedicated cron job that clears approvals that have crossed deadlines. Again, using the existing design, this can be an async worker added between db and kafka. 
