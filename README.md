@@ -15,7 +15,7 @@
 5. Maybe integrate with Slack or Gmail to send or receive approvals — or any other creative channel.
 6. Don’t forget retries, timeouts, or deadlines — human latency is unpredictable.
 
-
+[EDITED LATER] Video of demo with explanation: https://drive.google.com/file/d/17u_UrSexLfS2LjwtumeupswN8N-05Ccf/view?usp=sharing
 Video of demo: https://drive.google.com/file/d/1pJAxS5mzj7XJZ7bKxepUw-NxvWRQyweX/view?usp=sharing
 n8n webhook is used for notifications in both cases - notifying human and notifying ai agent. 
 ***What's happening in the video?***
